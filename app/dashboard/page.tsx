@@ -179,7 +179,7 @@ export default function DashboardPage() {
 
   // Volunteer collection data for chart based on selected range
   const volunteerCollectionData = useMemo(() => {
-    return volunteers.map(v => {
+    const data = volunteers.map(v => {
       const volunteerReceipts = activeReceipts.filter(r => {
         const isThisVolunteer = r.volunteer_id === v.uid;
         if (!isThisVolunteer) return false;
@@ -196,7 +196,20 @@ export default function DashboardPage() {
         amount: volunteerReceipts.reduce((sum, r) => sum + r.amount, 0),
       };
     }).filter(v => v.amount > 0);
+    
+    console.log('Volunteer Collection Chart Dataset:', data);
+    return data;
   }, [volunteers, activeReceipts, graphDateRange]);
+
+  const maxCollection = useMemo(() => {
+    return Math.max(...volunteerCollectionData.map(d => d.amount), 0);
+  }, [volunteerCollectionData]);
+
+  const formatYAxis = (value: number) => {
+    if (value === 0) return '₹0';
+    if (value >= 1000) return `₹${(value / 1000).toFixed(1)}K`;
+    return `₹${value}`;
+  };
 
   // Filtered receipts
   const filteredReceipts = useMemo(() => {
@@ -402,21 +415,48 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {volunteerCollectionData.length > 0 ? (
-                <div className="h-[200px]">
+                <div className="h-[250px] w-full mt-4">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={volunteerCollectionData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                      <XAxis type="number" tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`} />
-                      <YAxis type="category" dataKey="name" width={80} />
-                      <Tooltip
-                        formatter={(value: number) => [formatIndianCurrency(value), 'Collection']}
-                        contentStyle={{ borderRadius: '12px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)' }}
+                    <BarChart data={volunteerCollectionData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                      <XAxis 
+                        dataKey="name" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: 'oklch(0.5 0.02 30)' }}
                       />
-                      <Bar dataKey="amount" fill="url(#primaryGradient)" radius={[0, 8, 8, 0]} />
+                      <YAxis 
+                        tickFormatter={formatYAxis} 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: 'oklch(0.5 0.02 30)' }}
+                        domain={[0, maxCollection > 0 ? 'auto' : 100]}
+                      />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                        formatter={(value: number) => [formatIndianCurrency(value), 'Collection']}
+                        contentStyle={{ 
+                          borderRadius: '12px', 
+                          background: 'rgba(255,255,255,0.95)', 
+                          backdropFilter: 'blur(10px)',
+                          border: 'none',
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                        }}
+                      />
+                      <Bar 
+                        dataKey="amount" 
+                        fill="url(#primaryGradient)" 
+                        radius={[6, 6, 0, 0]}
+                        barSize={40}
+                      >
+                        {volunteerCollectionData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fillOpacity={0.9} />
+                        ))}
+                      </Bar>
                       <defs>
-                        <linearGradient id="primaryGradient" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#ff6b00" />
-                          <stop offset="100%" stopColor="#ff8c32" />
+                        <linearGradient id="primaryGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="oklch(0.65 0.2 45)" />
+                          <stop offset="100%" stopColor="oklch(0.6 0.2 45)" stopOpacity={0.8} />
                         </linearGradient>
                       </defs>
                     </BarChart>
